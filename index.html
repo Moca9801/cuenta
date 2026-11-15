@@ -71,9 +71,10 @@
   'use strict';
   // Los datos van en el fragmento (#...), que el navegador nunca envía al servidor.
   var ACCOUNT_RE = /^[A-Z0-9 ]{4,40}$/;
+  var INVISIBLE = new RegExp('[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF\u2028\u2029]', 'g');
   function clean(s) {
     // Quita controles y caracteres invisibles/bidi usados para engañar.
-    return String(s || '').replace(/[\u0000-\u001F\u007F-\u009F​-‏‪-‮⁦-⁩﻿  ]/g, '').trim().slice(0, 60);
+    return String(s || '').replace(INVISIBLE, '').trim().slice(0, 60);
   }
   function parse() {
     var h = location.hash.replace(/^#/, '');
