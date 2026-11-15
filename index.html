@@ -40,6 +40,11 @@
     border: 1px solid var(--line); background: var(--panel2); font-weight: 700; font-size: 15px; }
   .badge img, .badge .dot { width: 26px; height: 26px; border-radius: 50%; }
   .badge .dot { background: var(--acid); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; font: 700 11px var(--mono); }
+  .bankcard { display: flex; align-items: center; gap: 16px; padding: 20px; margin-bottom: 14px;
+    background: linear-gradient(135deg, #1b211a 0%, #141914 60%, #10130e 100%); }
+  .bankcard .bigicon img, .bankcard .bigicon .dot { width: 76px; height: 76px; border-radius: 20px; display: block; }
+  .bankcard .bigicon .dot { background: var(--acid); color: var(--ink); display: flex; align-items: center; justify-content: center; font: 800 32px var(--sans); }
+  .bankcard .bankname { font-size: 24px; font-weight: 800; letter-spacing: -.5px; margin-top: 4px; line-height: 1.15; word-break: break-word; }
   h2 { font-size: 17px; margin: 0 0 4px; letter-spacing: -.2px; }
   .hint { font-size: 13px; color: var(--muted); margin: 0 0 14px; line-height: 1.45; }
   .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
@@ -66,21 +71,20 @@
 
 <main>
   <section id="ok" hidden>
+    <div class="card bankcard" id="bankRow">
+      <div id="bankIcon" class="bigicon"></div>
+      <div><div class="label">Banco que recibe</div><div id="bank" class="bankname"></div></div>
+    </div>
     <div class="card">
       <div class="label">Número de cuenta</div>
       <div id="account" class="account"></div>
       <div class="row"><div class="label">Titular</div><div id="holder" class="value"></div></div>
-      <div class="row" id="bankRow"><div class="label">Banco que recibe</div><div class="badge"><span id="bankIcon"></span><span id="bank"></span></div></div>
       <button id="copy" type="button">Copiar número</button>
       <div id="status" class="status" role="status" aria-live="polite"></div>
     </div>
 
     <!-- Solo Android: abrir la app del banco DE QUIEN PAGA -->
     <div class="card" id="payFrom" hidden>
-      <div id="mineBox" hidden>
-        <button id="openMine" type="button" class="mine"><img id="mineLogo" alt=""><span id="mineText"></span></button>
-        <button id="change" type="button" class="link">Pagar desde otro banco</button>
-      </div>
       <div id="pickBox">
         <h2>¿Desde qué banco vas a pagar?</h2>
         <p class="hint">Toca tu banco: copiamos el número y abrimos tu app para que solo lo pegues.</p>
@@ -192,11 +196,7 @@
 
   // ---- Banco de QUIEN PAGA (solo Android: los iPhone no permiten abrir apps por paquete)
   if (!/Android/i.test(navigator.userAgent)) return;
-  var KEY = 'mova.miBanco';
-  function getMine() { try { var c = localStorage.getItem(KEY); return c && has(BANKS, c) ? c : null; } catch (e) { return null; } }
-  function setMine(c) { try { localStorage.setItem(KEY, c); } catch (e) {} }
   function openBank(code) {
-    setMine(code);
     copy(true);
     var pkg = BANKS[code][1];
     var store = 'https://play.google.com/store/apps/details?id=' + pkg;
@@ -216,15 +216,6 @@
     grid.appendChild(b);
   });
 
-  var mine = getMine();
-  var mineBox = document.getElementById('mineBox'), pickBox = document.getElementById('pickBox');
-  if (mine) {
-    document.getElementById('mineLogo').src = logo(mine);
-    document.getElementById('mineText').textContent = 'Copiar y abrir ' + BANKS[mine][0];
-    document.getElementById('openMine').addEventListener('click', function () { openBank(mine); });
-    mineBox.hidden = false; pickBox.hidden = true;
-  }
-  document.getElementById('change').addEventListener('click', function () { mineBox.hidden = true; pickBox.hidden = false; });
   document.getElementById('payFrom').hidden = false;
 })();
 </script>
