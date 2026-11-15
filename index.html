@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0b0e0b">
+<title>Cuenta para transferir · mova nfc</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2310130e'/%3E%3Cg fill='%238aff39' transform='rotate(-27 16 16)'%3E%3Crect x='7' y='12' width='4' height='12' rx='2'/%3E%3Crect x='14' y='7' width='4' height='18' rx='2'/%3E%3Crect x='21' y='8' width='4' height='16' rx='2'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #0b0e0b; --panel: #141914; --line: rgba(234,242,229,.12);
+    --paper: #f0f2eb; --muted: #969d91; --acid: #8aff39; --danger: #ff6b5b;
+    --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+    --sans: Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--ink); color: var(--paper); font-family: var(--sans); }
+  body { min-height: 100dvh; display: flex; flex-direction: column; }
+  body::before { content: ''; position: fixed; inset: 0; pointer-events: none; opacity: .05;
+    background-image: radial-gradient(rgba(240,242,235,.8) 1px, transparent 0); background-size: 24px 24px; }
+  header { display: flex; align-items: center; gap: 10px; padding: 18px 16px; }
+  header .name { font-weight: 800; font-size: 18px; letter-spacing: -.4px; }
+  header .tag { font-family: var(--mono); font-size: 11px; color: var(--acid); letter-spacing: .8px; }
+  main { flex: 1; width: 100%; max-width: 480px; margin: 0 auto; padding: 8px 16px 32px; position: relative; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 24px 20px; }
+  .label { font-family: var(--mono); font-size: 11px; letter-spacing: .8px; color: var(--muted); text-transform: uppercase; }
+  .account { font-family: var(--mono); font-size: clamp(22px, 7vw, 30px); color: var(--acid); word-break: break-all; margin: 6px 0 18px; line-height: 1.25; }
+  .row { margin-top: 12px; }
+  .value { font-size: 17px; font-weight: 600; margin-top: 2px; word-break: break-word; }
+  button { width: 100%; margin-top: 22px; border: 0; border-radius: 14px; padding: 16px; font: 700 16px var(--sans);
+    background: var(--acid); color: var(--ink); cursor: pointer; }
+  button:active { transform: scale(.98); }
+  .status { min-height: 22px; margin-top: 12px; text-align: center; font-size: 14px; color: var(--acid); }
+  .warn { margin-top: 18px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+  .warn strong { color: var(--paper); }
+  .error { color: var(--danger); text-align: center; padding: 40px 0; line-height: 1.5; }
+  footer { text-align: center; padding: 16px; font-size: 12px; color: var(--muted); }
+  footer em { color: var(--acid); font-family: Georgia, serif; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#10130e"/><g fill="#8aff39" transform="rotate(-27 16 16)"><rect x="7" y="12" width="4" height="12" rx="2"/><rect x="14" y="7" width="4" height="18" rx="2"/><rect x="21" y="8" width="4" height="16" rx="2"/></g></svg>
+  <span class="name">mova</span><span class="tag">NFC</span>
+</header>
+
+<main>
+  <section id="ok" class="card" hidden>
+    <div class="label">Número de cuenta</div>
+    <div id="account" class="account"></div>
+    <div class="row"><div class="label">Titular</div><div id="holder" class="value"></div></div>
+    <div class="row" id="bankRow"><div class="label">Banco</div><div id="bank" class="value"></div></div>
+    <button id="copy" type="button">Copiar número</button>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <p class="warn"><strong>Verifica el nombre del titular antes de transferir.</strong> Esta página no guarda ni envía tus datos: todo ocurre en tu teléfono.</p>
+  </section>
+  <section id="bad" class="error" hidden>
+    Este enlace no contiene una cuenta válida.<br>Vuelve a acercar el chip NFC.
+  </section>
+</main>
+
+<footer>Hecho con mova nfc · <em>Ideas que toman forma</em></footer>
+
+<script>
+(function () {
+  'use strict';
+  // Los datos van en el fragmento (#...), que el navegador nunca envía al servidor.
+  var ACCOUNT_RE = /^[A-Z0-9 ]{4,40}$/;
+  function clean(s) {
+    // Quita controles y caracteres invisibles/bidi usados para engañar.
+    return String(s || '').replace(/[\u0000-\u001F\u007F-\u009F​-‏‪-‮⁦-⁩﻿  ]/g, '').trim().slice(0, 60);
+  }
+  function parse() {
+    var h = location.hash.replace(/^#/, '');
+    if (!h || h.length > 600) return null;
+    var p = {};
+    h.split('&').forEach(function (kv) {
+      var i = kv.indexOf('=');
+      if (i > 0) {
+        try { p[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1).replace(/\+/g, ' ')); } catch (e) {}
+      }
+    });
+    var account = clean(p.c).toUpperCase().replace(/[\s-]+/g, ' ');
+    var holder = clean(p.t);
+    var bank = clean(p.b);
+    if (!holder || !ACCOUNT_RE.test(account)) return null;
+    return { account: account, holder: holder, bank: bank, copy: account.replace(/ /g, '') };
+  }
+
+  var data = parse();
+  if (!data) { document.getElementById('bad').hidden = false; return; }
+
+  document.getElementById('account').textContent = data.account;
+  document.getElementById('holder').textContent = data.holder;
+  if (data.bank) document.getElementById('bank').textContent = data.bank;
+  else document.getElementById('bankRow').hidden = true;
+  document.getElementById('ok').hidden = false;
+
+  var status = document.getElementById('status');
+  function done() { status.textContent = '✓ Número copiado. Pégalo en tu app del banco.'; }
+  function legacyCopy() {
+    var ta = document.createElement('textarea');
+    ta.value = data.copy; ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, 99);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+  function copy(fromUser) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(data.copy).then(done, function () {
+        if (fromUser && legacyCopy()) done();
+        else if (fromUser) status.textContent = 'Mantén presionado el número para copiarlo.';
+      });
+    } else if (fromUser) {
+      if (legacyCopy()) done(); else status.textContent = 'Mantén presionado el número para copiarlo.';
+    }
+  }
+  document.getElementById('copy').addEventListener('click', function () { copy(true); });
+  // Intento automático (Chrome lo permite al abrir la página; si no, queda el botón).
+  copy(false);
+})();
+</script>
+</body>
+</html>
