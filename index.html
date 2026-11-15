@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0b0e0b">
@@ -12,7 +12,7 @@
 <style>
   :root {
     color-scheme: dark;
-    --ink: #0b0e0b; --panel: #141914; --line: rgba(234,242,229,.12);
+    --ink: #0b0e0b; --panel: #141914; --panel2: #1b211a; --line: rgba(234,242,229,.12);
     --paper: #f0f2eb; --muted: #969d91; --acid: #8aff39; --danger: #ff6b5b;
     --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
     --sans: Inter, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -27,6 +27,7 @@
   header .tag { font-family: var(--mono); font-size: 11px; color: var(--acid); letter-spacing: .8px; }
   main { flex: 1; width: 100%; max-width: 480px; margin: 0 auto; padding: 8px 16px 32px; position: relative; }
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 24px 20px; }
+  .card + .card { margin-top: 14px; }
   .label { font-family: var(--mono); font-size: 11px; letter-spacing: .8px; color: var(--muted); text-transform: uppercase; }
   .account { font-family: var(--mono); font-size: clamp(22px, 7vw, 30px); color: var(--acid); word-break: break-all; margin: 6px 0 18px; line-height: 1.25; }
   .row { margin-top: 12px; }
@@ -34,16 +35,25 @@
   button { width: 100%; margin-top: 22px; border: 0; border-radius: 14px; padding: 16px; font: 700 16px var(--sans);
     background: var(--acid); color: var(--ink); cursor: pointer; }
   button:active { transform: scale(.98); }
-  button.secondary { background: transparent; color: var(--acid); border: 1px solid var(--acid); margin-top: 12px; }
-  .badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; padding: 6px 12px; border-radius: 999px;
-    border: 1px solid var(--line); background: #1b211a; font-weight: 700; font-size: 15px; }
-  .badge .dot { width: 22px; height: 22px; border-radius: 50%; background: var(--acid); color: var(--ink);
-    display: inline-flex; align-items: center; justify-content: center; font: 700 11px var(--mono); }
   .status { min-height: 22px; margin-top: 12px; text-align: center; font-size: 14px; color: var(--acid); }
+  .badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; padding: 5px 12px 5px 5px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel2); font-weight: 700; font-size: 15px; }
+  .badge img, .badge .dot { width: 26px; height: 26px; border-radius: 50%; }
+  .badge .dot { background: var(--acid); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; font: 700 11px var(--mono); }
+  h2 { font-size: 17px; margin: 0 0 4px; letter-spacing: -.2px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 0 0 14px; line-height: 1.45; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .bank { margin: 0; padding: 8px 2px 6px; background: var(--panel2); border: 1px solid var(--line); border-radius: 14px;
+    color: var(--paper); font: 600 10.5px var(--sans); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .bank img { width: 44px; height: 44px; border-radius: 11px; }
+  .bank span { line-height: 1.15; text-align: center; min-height: 24px; display: flex; align-items: center; }
+  .mine { display: flex; align-items: center; gap: 12px; margin-top: 0; }
+  .mine img { width: 30px; height: 30px; border-radius: 8px; }
+  .link { background: none; color: var(--acid); padding: 10px; margin-top: 6px; font-weight: 600; font-size: 14px; text-decoration: underline; }
   .warn { margin-top: 18px; font-size: 13px; line-height: 1.5; color: var(--muted); }
   .warn strong { color: var(--paper); }
   .error { color: var(--danger); text-align: center; padding: 40px 0; line-height: 1.5; }
-  footer { text-align: center; padding: 16px; font-size: 12px; color: var(--muted); }
+  footer { text-align: center; padding: 16px; font-size: 11px; color: var(--muted); line-height: 1.5; }
   footer em { color: var(--acid); font-family: Georgia, serif; }
   [hidden] { display: none !important; }
 </style>
@@ -55,30 +65,46 @@
 </header>
 
 <main>
-  <section id="ok" class="card" hidden>
-    <div class="label">Número de cuenta</div>
-    <div id="account" class="account"></div>
-    <div class="row"><div class="label">Titular</div><div id="holder" class="value"></div></div>
-    <div class="row" id="bankRow"><div class="label">Banco</div><div class="badge"><span id="bankDot" class="dot"></span><span id="bank"></span></div></div>
-    <button id="copy" type="button">Copiar número</button>
-    <button id="openBank" type="button" class="secondary" hidden></button>
-    <div id="status" class="status" role="status" aria-live="polite"></div>
-    <p class="warn"><strong>Verifica el nombre del titular antes de transferir.</strong> Esta página no guarda ni envía tus datos: todo ocurre en tu teléfono.</p>
+  <section id="ok" hidden>
+    <div class="card">
+      <div class="label">Número de cuenta</div>
+      <div id="account" class="account"></div>
+      <div class="row"><div class="label">Titular</div><div id="holder" class="value"></div></div>
+      <div class="row" id="bankRow"><div class="label">Banco que recibe</div><div class="badge"><span id="bankIcon"></span><span id="bank"></span></div></div>
+      <button id="copy" type="button">Copiar número</button>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </div>
+
+    <!-- Solo Android: abrir la app del banco DE QUIEN PAGA -->
+    <div class="card" id="payFrom" hidden>
+      <div id="mineBox" hidden>
+        <button id="openMine" type="button" class="mine"><img id="mineLogo" alt=""><span id="mineText"></span></button>
+        <button id="change" type="button" class="link">Pagar desde otro banco</button>
+      </div>
+      <div id="pickBox">
+        <h2>¿Desde qué banco vas a pagar?</h2>
+        <p class="hint">Toca tu banco: copiamos el número y abrimos tu app para que solo lo pegues.</p>
+        <div id="grid" class="grid"></div>
+      </div>
+    </div>
+
+    <p class="warn"><strong>Verifica el nombre del titular antes de transferir.</strong> Esta página no guarda ni envía los datos de la cuenta: todo ocurre en tu teléfono.</p>
   </section>
   <section id="bad" class="error" hidden>
     Este enlace no contiene una cuenta válida.<br>Vuelve a acercar el chip NFC.
   </section>
 </main>
 
-<footer>Hecho con mova nfc · <em>Ideas que toman forma</em></footer>
+<footer>Hecho con mova nfc · <em>Ideas que toman forma</em><br>Los logotipos son marcas de sus respectivos dueños. mova nfc no está afiliada a ningún banco.</footer>
 
 <script>
 (function () {
   'use strict';
   // Los datos van en el fragmento (#...), que el navegador nunca envía al servidor.
   var ACCOUNT_RE = /^[A-Z0-9 ]{4,40}$/;
-  // Catálogo fijo: el chip solo indica el código; el paquete de la app vive aquí.
-  // Mantener sincronizado con BankCatalog.kt de mova nfc.
+  var INVISIBLE = new RegExp('[\u0000-\u001F\u007F-\u009F​-‏‪-‮⁦-⁩﻿  ]', 'g');
+  // Catálogo fijo (mantener sincronizado con BankCatalog.kt). Paquetes verificados en Google Play.
+  var ORDER = ['bbva', 'banorte', 'santander', 'banamex', 'hsbc', 'scotia', 'azteca', 'bancoppel', 'inbursa', 'nu', 'mp', 'spin'];
   var BANKS = {
     bbva: ['BBVA', 'com.bancomer.mbanking'],
     banorte: ['Banorte', 'org.microemu.android.model.common.VTUserApplicationBNRTMB'],
@@ -93,17 +119,16 @@
     mp: ['Mercado Pago', 'com.mercadopago.wallet'],
     spin: ['Spin by OXXO', 'com.pagopopmobile']
   };
-  function findBank(v) {
+  function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function codeOf(v) {
     var k = String(v || '').toLowerCase();
-    if (Object.prototype.hasOwnProperty.call(BANKS, k)) return BANKS[k];
-    for (var c in BANKS) { if (Object.prototype.hasOwnProperty.call(BANKS, c) && BANKS[c][0].toLowerCase() === k) return BANKS[c]; }
+    if (has(BANKS, k)) return k;
+    for (var i = 0; i < ORDER.length; i++) { if (BANKS[ORDER[i]][0].toLowerCase() === k) return ORDER[i]; }
     return null;
   }
-  var INVISIBLE = new RegExp('[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF\u2028\u2029]', 'g');
-  function clean(s) {
-    // Quita controles y caracteres invisibles/bidi usados para engañar.
-    return String(s || '').replace(INVISIBLE, '').trim().slice(0, 60);
-  }
+  function logo(code) { return 'logos/' + code + '.webp'; }
+  function clean(s) { return String(s || '').replace(INVISIBLE, '').trim().slice(0, 60); }
+
   function parse() {
     var h = location.hash.replace(/^#/, '');
     if (!h || h.length > 600) return null;
@@ -117,22 +142,29 @@
     var account = clean(p.c).toUpperCase().replace(/[\s-]+/g, ' ');
     var holder = clean(p.t);
     var bankRaw = clean(p.b);
-    var entry = findBank(bankRaw);
+    var code = codeOf(bankRaw);
     if (!holder || !ACCOUNT_RE.test(account)) return null;
-    return { account: account, holder: holder, bank: entry ? entry[0] : bankRaw, pkg: entry ? entry[1] : null, copy: account.replace(/ /g, '') };
+    return { account: account, holder: holder, bank: code ? BANKS[code][0] : bankRaw, code: code, copy: account.replace(/ /g, '') };
   }
 
   var data = parse();
   if (!data) { document.getElementById('bad').hidden = false; return; }
 
+  // ---- Datos de la cuenta que RECIBE
   document.getElementById('account').textContent = data.account;
   document.getElementById('holder').textContent = data.holder;
+  var icon = document.getElementById('bankIcon');
   if (data.bank) {
     document.getElementById('bank').textContent = data.bank;
-    document.getElementById('bankDot').textContent = data.bank.charAt(0).toUpperCase();
+    if (data.code) {
+      var img = document.createElement('img'); img.src = logo(data.code); img.alt = ''; icon.appendChild(img);
+    } else {
+      var dot = document.createElement('span'); dot.className = 'dot'; dot.textContent = data.bank.charAt(0).toUpperCase(); icon.appendChild(dot);
+    }
   } else document.getElementById('bankRow').hidden = true;
   document.getElementById('ok').hidden = false;
 
+  // ---- Copiar
   var status = document.getElementById('status');
   function done() { status.textContent = '✓ Número copiado. Pégalo en tu app del banco.'; }
   function legacyCopy() {
@@ -156,22 +188,44 @@
     }
   }
   document.getElementById('copy').addEventListener('click', function () { copy(true); });
-
-  // Botón "Copiar y abrir <banco>": solo en Android y solo con bancos del catálogo.
-  if (data.pkg && /Android/i.test(navigator.userAgent)) {
-    var ob = document.getElementById('openBank');
-    ob.textContent = 'Copiar y abrir ' + data.bank;
-    ob.hidden = false;
-    ob.addEventListener('click', function () {
-      copy(true);
-      var store = 'https://play.google.com/store/apps/details?id=' + data.pkg;
-      var intent = 'intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=' +
-        data.pkg + ';S.browser_fallback_url=' + encodeURIComponent(store) + ';end';
-      setTimeout(function () { location.href = intent; }, 150);
-    });
-  }
-  // Intento automático (Chrome lo permite al abrir la página; si no, queda el botón).
   copy(false);
+
+  // ---- Banco de QUIEN PAGA (solo Android: los iPhone no permiten abrir apps por paquete)
+  if (!/Android/i.test(navigator.userAgent)) return;
+  var KEY = 'mova.miBanco';
+  function getMine() { try { var c = localStorage.getItem(KEY); return c && has(BANKS, c) ? c : null; } catch (e) { return null; } }
+  function setMine(c) { try { localStorage.setItem(KEY, c); } catch (e) {} }
+  function openBank(code) {
+    setMine(code);
+    copy(true);
+    var pkg = BANKS[code][1];
+    var store = 'https://play.google.com/store/apps/details?id=' + pkg;
+    var intent = 'intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=' +
+      pkg + ';S.browser_fallback_url=' + encodeURIComponent(store) + ';end';
+    setTimeout(function () { location.href = intent; }, 150);
+  }
+
+  var grid = document.getElementById('grid');
+  ORDER.forEach(function (code) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = 'bank';
+    var im = document.createElement('img'); im.src = logo(code); im.alt = '';
+    var sp = document.createElement('span'); sp.textContent = BANKS[code][0];
+    b.appendChild(im); b.appendChild(sp);
+    b.addEventListener('click', function () { openBank(code); });
+    grid.appendChild(b);
+  });
+
+  var mine = getMine();
+  var mineBox = document.getElementById('mineBox'), pickBox = document.getElementById('pickBox');
+  if (mine) {
+    document.getElementById('mineLogo').src = logo(mine);
+    document.getElementById('mineText').textContent = 'Copiar y abrir ' + BANKS[mine][0];
+    document.getElementById('openMine').addEventListener('click', function () { openBank(mine); });
+    mineBox.hidden = false; pickBox.hidden = true;
+  }
+  document.getElementById('change').addEventListener('click', function () { mineBox.hidden = true; pickBox.hidden = false; });
+  document.getElementById('payFrom').hidden = false;
 })();
 </script>
 </body>
