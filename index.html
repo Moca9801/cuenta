@@ -34,6 +34,11 @@
   button { width: 100%; margin-top: 22px; border: 0; border-radius: 14px; padding: 16px; font: 700 16px var(--sans);
     background: var(--acid); color: var(--ink); cursor: pointer; }
   button:active { transform: scale(.98); }
+  button.secondary { background: transparent; color: var(--acid); border: 1px solid var(--acid); margin-top: 12px; }
+  .badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 4px; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--line); background: #1b211a; font-weight: 700; font-size: 15px; }
+  .badge .dot { width: 22px; height: 22px; border-radius: 50%; background: var(--acid); color: var(--ink);
+    display: inline-flex; align-items: center; justify-content: center; font: 700 11px var(--mono); }
   .status { min-height: 22px; margin-top: 12px; text-align: center; font-size: 14px; color: var(--acid); }
   .warn { margin-top: 18px; font-size: 13px; line-height: 1.5; color: var(--muted); }
   .warn strong { color: var(--paper); }
@@ -54,8 +59,9 @@
     <div class="label">Número de cuenta</div>
     <div id="account" class="account"></div>
     <div class="row"><div class="label">Titular</div><div id="holder" class="value"></div></div>
-    <div class="row" id="bankRow"><div class="label">Banco</div><div id="bank" class="value"></div></div>
+    <div class="row" id="bankRow"><div class="label">Banco</div><div class="badge"><span id="bankDot" class="dot"></span><span id="bank"></span></div></div>
     <button id="copy" type="button">Copiar número</button>
+    <button id="openBank" type="button" class="secondary" hidden></button>
     <div id="status" class="status" role="status" aria-live="polite"></div>
     <p class="warn"><strong>Verifica el nombre del titular antes de transferir.</strong> Esta página no guarda ni envía tus datos: todo ocurre en tu teléfono.</p>
   </section>
@@ -71,6 +77,28 @@
   'use strict';
   // Los datos van en el fragmento (#...), que el navegador nunca envía al servidor.
   var ACCOUNT_RE = /^[A-Z0-9 ]{4,40}$/;
+  // Catálogo fijo: el chip solo indica el código; el paquete de la app vive aquí.
+  // Mantener sincronizado con BankCatalog.kt de mova nfc.
+  var BANKS = {
+    bbva: ['BBVA', 'com.bancomer.mbanking'],
+    banorte: ['Banorte', 'org.microemu.android.model.common.VTUserApplicationBNRTMB'],
+    santander: ['Santander', 'mx.bancosantander.supermovil'],
+    banamex: ['Banamex', 'com.citibanamex.banamexmobile'],
+    hsbc: ['HSBC', 'mx.hsbc.hsbcmexico'],
+    scotia: ['Scotiabank', 'com.scotiabankmx.scotiamovil'],
+    azteca: ['Banco Azteca', 'mx.com.bancoazteca.bazdigitalmovil'],
+    bancoppel: ['BanCoppel', 'mx.com.miapp'],
+    inbursa: ['Inbursa', 'com.inbursa.client'],
+    nu: ['Nu', 'com.nu.production'],
+    mp: ['Mercado Pago', 'com.mercadopago.wallet'],
+    spin: ['Spin by OXXO', 'com.pagopopmobile']
+  };
+  function findBank(v) {
+    var k = String(v || '').toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(BANKS, k)) return BANKS[k];
+    for (var c in BANKS) { if (Object.prototype.hasOwnProperty.call(BANKS, c) && BANKS[c][0].toLowerCase() === k) return BANKS[c]; }
+    return null;
+  }
   var INVISIBLE = new RegExp('[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF\u2028\u2029]', 'g');
   function clean(s) {
     // Quita controles y caracteres invisibles/bidi usados para engañar.
@@ -88,9 +116,10 @@
     });
     var account = clean(p.c).toUpperCase().replace(/[\s-]+/g, ' ');
     var holder = clean(p.t);
-    var bank = clean(p.b);
+    var bankRaw = clean(p.b);
+    var entry = findBank(bankRaw);
     if (!holder || !ACCOUNT_RE.test(account)) return null;
-    return { account: account, holder: holder, bank: bank, copy: account.replace(/ /g, '') };
+    return { account: account, holder: holder, bank: entry ? entry[0] : bankRaw, pkg: entry ? entry[1] : null, copy: account.replace(/ /g, '') };
   }
 
   var data = parse();
@@ -98,8 +127,10 @@
 
   document.getElementById('account').textContent = data.account;
   document.getElementById('holder').textContent = data.holder;
-  if (data.bank) document.getElementById('bank').textContent = data.bank;
-  else document.getElementById('bankRow').hidden = true;
+  if (data.bank) {
+    document.getElementById('bank').textContent = data.bank;
+    document.getElementById('bankDot').textContent = data.bank.charAt(0).toUpperCase();
+  } else document.getElementById('bankRow').hidden = true;
   document.getElementById('ok').hidden = false;
 
   var status = document.getElementById('status');
@@ -125,6 +156,20 @@
     }
   }
   document.getElementById('copy').addEventListener('click', function () { copy(true); });
+
+  // Botón "Copiar y abrir <banco>": solo en Android y solo con bancos del catálogo.
+  if (data.pkg && /Android/i.test(navigator.userAgent)) {
+    var ob = document.getElementById('openBank');
+    ob.textContent = 'Copiar y abrir ' + data.bank;
+    ob.hidden = false;
+    ob.addEventListener('click', function () {
+      copy(true);
+      var store = 'https://play.google.com/store/apps/details?id=' + data.pkg;
+      var intent = 'intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=' +
+        data.pkg + ';S.browser_fallback_url=' + encodeURIComponent(store) + ';end';
+      setTimeout(function () { location.href = intent; }, 150);
+    });
+  }
   // Intento automático (Chrome lo permite al abrir la página; si no, queda el botón).
   copy(false);
 })();
