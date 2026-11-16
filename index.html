@@ -151,6 +151,9 @@
     return { account: account, holder: holder, bank: code ? BANKS[code][0] : bankRaw, code: code, copy: account.replace(/ /g, '') };
   }
 
+  // Si se escanea otro chip con la página ya abierta, solo cambia el "#": recargar para no mostrar la cuenta anterior.
+  window.addEventListener('hashchange', function () { location.reload(); });
+
   var data = parse();
   if (!data) { document.getElementById('bad').hidden = false; return; }
 
