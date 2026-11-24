@@ -83,11 +83,11 @@
       <div id="status" class="status" role="status" aria-live="polite"></div>
     </div>
 
-    <!-- Solo Android: abrir la app del banco DE QUIEN PAGA -->
+    <!-- Android y iPhone: abrir la app del banco DE QUIEN PAGA -->
     <div class="card" id="payFrom" hidden>
       <div id="pickBox">
         <h2>¿Desde qué banco vas a pagar?</h2>
-        <p class="hint">Toca tu banco: copiamos el número y abrimos tu app para que solo lo pegues.</p>
+        <p class="hint" id="hint">Toca tu banco: copiamos el número y abrimos tu app para que solo lo pegues.</p>
         <div id="grid" class="grid"></div>
       </div>
     </div>
@@ -107,21 +107,23 @@
   // Los datos van en el fragmento (#...), que el navegador nunca envía al servidor.
   var ACCOUNT_RE = /^[A-Z0-9 ]{4,40}$/;
   var INVISIBLE = new RegExp('[\u0000-\u001F\u007F-\u009F​-‏‪-‮⁦-⁩﻿  ]', 'g');
-  // Catálogo fijo (mantener sincronizado con BankCatalog.kt). Paquetes verificados en Google Play.
-  var ORDER = ['bbva', 'banorte', 'santander', 'banamex', 'hsbc', 'scotia', 'azteca', 'bancoppel', 'inbursa', 'nu', 'mp', 'spin'];
+  // Catálogo fijo (mantener sincronizado con BankCatalog.kt).
+  // [nombre, paquete de Google Play, id de App Store México]: verificados en cada tienda.
+  var ORDER = ['bbva', 'banorte', 'santander', 'banamex', 'hsbc', 'scotia', 'bajio', 'azteca', 'bancoppel', 'inbursa', 'nu', 'mp', 'spin'];
   var BANKS = {
-    bbva: ['BBVA', 'com.bancomer.mbanking'],
-    banorte: ['Banorte', 'org.microemu.android.model.common.VTUserApplicationBNRTMB'],
-    santander: ['Santander', 'mx.bancosantander.supermovil'],
-    banamex: ['Banamex', 'com.citibanamex.banamexmobile'],
-    hsbc: ['HSBC', 'mx.hsbc.hsbcmexico'],
-    scotia: ['Scotiabank', 'com.scotiabankmx.scotiamovil'],
-    azteca: ['Banco Azteca', 'mx.com.bancoazteca.bazdigitalmovil'],
-    bancoppel: ['BanCoppel', 'mx.com.miapp'],
-    inbursa: ['Inbursa', 'com.inbursa.client'],
-    nu: ['Nu', 'com.nu.production'],
-    mp: ['Mercado Pago', 'com.mercadopago.wallet'],
-    spin: ['Spin by OXXO', 'com.pagopopmobile']
+    bbva: ['BBVA', 'com.bancomer.mbanking', '374824226'],
+    banorte: ['Banorte', 'org.microemu.android.model.common.VTUserApplicationBNRTMB', '374817863'],
+    santander: ['Santander', 'mx.bancosantander.supermovil', '498944221'],
+    banamex: ['Banamex', 'com.citibanamex.banamexmobile', '498483038'],
+    hsbc: ['HSBC', 'mx.hsbc.hsbcmexico', '1453854471'],
+    scotia: ['Scotiabank', 'com.scotiabankmx.scotiamovil', '720812080'],
+    bajio: ['BanBajío', 'org.microemu.android.model.common.VTUserApplicationBNBJMB', '510467512'],
+    azteca: ['Banco Azteca', 'mx.com.bancoazteca.bazdigitalmovil', '1203433478'],
+    bancoppel: ['BanCoppel', 'mx.com.miapp', '1293933664'],
+    inbursa: ['Inbursa', 'com.inbursa.client', '389155495'],
+    nu: ['Nu', 'com.nu.production', '814456780'],
+    mp: ['Mercado Pago', 'com.mercadopago.wallet', '925436649'],
+    spin: ['Spin by OXXO', 'com.pagopopmobile', '1511764877']
   };
   function has(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
   function codeOf(v) {
@@ -197,10 +199,23 @@
   document.getElementById('copy').addEventListener('click', function () { copy(true); });
   copy(false);
 
-  // ---- Banco de QUIEN PAGA (solo Android: los iPhone no permiten abrir apps por paquete)
-  if (!/Android/i.test(navigator.userAgent)) return;
+  // ---- Banco de QUIEN PAGA
+  var ua = navigator.userAgent;
+  var isAndroid = /Android/i.test(ua);
+  // iPadOS se presenta como Mac: se distingue por la pantalla táctil.
+  var isIOS = /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+  if (!isAndroid && !isIOS) return;
+  if (isIOS) {
+    // iPhone no deja abrir apps ajenas por nombre: se abre su ficha de App Store, que muestra «Abrir» si ya está instalada.
+    document.getElementById('hint').textContent = 'Toca tu banco: copiamos el número y abrimos tu app en App Store. Toca «Abrir» y pega el número.';
+  }
   function openBank(code) {
     copy(true);
+    if (isIOS) {
+      var appStore = 'https://apps.apple.com/mx/app/id' + BANKS[code][2];
+      setTimeout(function () { location.href = appStore; }, 150);
+      return;
+    }
     var pkg = BANKS[code][1];
     var store = 'https://play.google.com/store/apps/details?id=' + pkg;
     var intent = 'intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=' +
